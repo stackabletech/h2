@@ -32,6 +32,7 @@ pub async fn yield_once() {
     .await;
 }
 
+/// Should only be called after a non-0 capacity was requested for the stream.
 pub fn wait_for_capacity(stream: h2::SendStream<Bytes>, target: usize) -> WaitForCapacity {
     WaitForCapacity {
         stream: Some(stream),
@@ -54,14 +55,19 @@ impl Future for WaitForCapacity {
     type Output = h2::SendStream<Bytes>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let _ = ready!(self.stream().poll_capacity(cx)).unwrap();
+        loop {
+            let _ = ready!(self.stream().poll_capacity(cx)).unwrap();
 
-        let act = self.stream().capacity();
+            let act = self.stream().capacity();
 
-        if act >= self.target {
-            return Poll::Ready(self.stream.take().unwrap().into());
+            // If a non-0 capacity was requested for the stream before calling
+            // wait_for_capacity, then poll_capacity should return Pending
+            // until there is a non-0 capacity.
+            assert_ne!(act, 0);
+
+            if act >= self.target {
+                return Poll::Ready(self.stream.take().unwrap().into());
+            }
         }
-
-        Poll::Pending
     }
 }
