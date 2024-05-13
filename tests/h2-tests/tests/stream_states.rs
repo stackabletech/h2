@@ -508,6 +508,7 @@ async fn recv_goaway_with_higher_last_processed_id() {
 }
 
 #[tokio::test]
+#[ignore = "authority validation disabled by grpc-uds"]
 async fn recv_next_stream_id_updated_by_malformed_headers() {
     h2_support::trace_init!();
     let (io, mut client) = mock::new();

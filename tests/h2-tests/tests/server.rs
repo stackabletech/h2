@@ -504,11 +504,21 @@ async fn recv_invalid_authority() {
         let settings = client.assert_server_handshake().await;
         assert_default_settings!(settings);
         client.send_frame(bad_headers).await;
-        client.recv_frame(frames::reset(1).protocol_error()).await;
+        // grpc-uds patch: must now still be accepted
+        client
+            .recv_frame(frames::headers(1).response(200).eos())
+            .await;
     };
 
     let srv = async move {
         let mut srv = server::handshake(io).await.expect("handshake");
+
+        // grpc-uds patch: must now still be accepted
+        let (req, mut stream) = srv.next().await.unwrap().unwrap();
+        assert_eq!(req.method(), &http::Method::GET);
+        let rsp = http::Response::builder().status(200).body(()).unwrap();
+        stream.send_response(rsp, true).unwrap();
+
         assert!(srv.next().await.is_none());
     };
 
