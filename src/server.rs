@@ -413,7 +413,7 @@ where
     pub async fn accept(
         &mut self,
     ) -> Option<Result<(Request<RecvStream>, SendResponse<B>), crate::Error>> {
-        futures_util::future::poll_fn(move |cx| self.poll_accept(cx)).await
+        crate::poll_fn(move |cx| self.poll_accept(cx)).await
     }
 
     #[doc(hidden)]
@@ -512,12 +512,6 @@ where
     /// [`SendStream`]: ../struct.SendStream.html
     pub fn poll_closed(&mut self, cx: &mut Context) -> Poll<Result<(), crate::Error>> {
         self.connection.poll(cx).map_err(Into::into)
-    }
-
-    #[doc(hidden)]
-    #[deprecated(note = "renamed to poll_closed")]
-    pub fn poll_close(&mut self, cx: &mut Context) -> Poll<Result<(), crate::Error>> {
-        self.poll_closed(cx)
     }
 
     /// Sets the connection to a GOAWAY state.
